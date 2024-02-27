@@ -7,6 +7,9 @@ using Amazon.Textract.Model;
 using Newtonsoft.Json;
 using System;
 using ConsoleApp3;
+using System.Linq;
+using System.Runtime.InteropServices;
+using static System.Net.Mime.MediaTypeNames;
 namespace TextractExample
 {
     class Program
@@ -48,8 +51,14 @@ namespace TextractExample
             var response = await textractClient.AnalyzeDocumentAsync(request);
 
             var Extracted = new List<TextClass>();
-            // Output extracted text from forms
-            Console.WriteLine("Extracted text:");
+            // Output extracted text
+
+            
+            // Output extracted text
+
+
+          Console.WriteLine("\nExtracted text from PDF | Image:");
+
             foreach (var item in response.Blocks)
             {
                 if (item.BlockType == "WORD")
@@ -61,26 +70,16 @@ namespace TextractExample
                     };
                     string json = JsonConvert.SerializeObject(item, settings);
 
-                     TextClass rawText = JsonConvert.DeserializeObject<TextClass>(json);
 
-                    Extracted.Add(rawText);
 
-                 /*   var options = new JsonSerializerOptions
-                    {
-                        WriteIndented = true // Set to true for indentation
-                    };
-                    string json = JsonSerializer.Serialize(item, options);
-                    Console.WriteLine($"{json}");
+                    TextClass rawText = JsonConvert.DeserializeObject<TextClass>(json);
 
-                    */
+                   Extracted.Add(rawText);            
                 }
             }
 
-
-            //Output Forms
-
-                Console.WriteLine("\nExtracted text from PDF | Image:");
-                foreach (var text in Extracted)
+            //Output Text          
+            foreach (var text in Extracted)
             {
                 JsonSerializerSettings settings = new JsonSerializerSettings
                 {
@@ -90,32 +89,62 @@ namespace TextractExample
 
                 Console.WriteLine(json);
             }
+     
+
+            
 
 
-            /*   // Output extracted text from tables
-               Console.WriteLine("\nExtracted text from tables:");
-               foreach (var item in response.Blocks)
-               {
-                   if (item.BlockType == "TABLE")
-                   {
-                       foreach (var cell in item.Relationships[0].Ids)
-                       {
-                           var cellBlock = response.Blocks.Find(b => b.Id == cell);
-                           if (cellBlock.BlockType == "CELL")
-                           {
-                               Console.Write(cellBlock.Text + "\t");
 
-                           }
-                       }
-                       Console.WriteLine();
 
-                   }
+            var dictionary = new Dictionary<string, object>();
 
-               }
-               */
+            Console.WriteLine("\nExtracted form:");
+
+            foreach (var item in response.Blocks)
+            {
+
+                if(item.BlockType == "KEY_VALUE_SET")
+                {
+                    JsonSerializerSettings settings = new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented
+                    };
+                    string json = JsonConvert.SerializeObject(item, settings);
+
+                    Console.WriteLine(json);
+                }
+
+            }
+
+
+
+
+     /*       //Output Text          
+            foreach (var text in Extracted)
+            {
+                JsonSerializerSettings settings = new JsonSerializerSettings
+                {
+                    Formatting = Formatting.Indented
+                };
+                string json = JsonConvert.SerializeObject(text, settings);
+
+                Console.WriteLine(json);
+            }
+     */
+            
+
+
+
+
+
+
+
+
+
 
 
             Console.ReadLine();
         }
     }
+   
 }
