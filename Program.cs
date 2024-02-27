@@ -99,7 +99,7 @@ namespace TextractExample
             var dictionary = new Dictionary<string, object>();
 
             Console.WriteLine("\nExtracted form:");
-
+            
             foreach (var item in response.Blocks)
             {
 
@@ -115,7 +115,7 @@ namespace TextractExample
                 }
 
             }
-
+            //
 
 
 
