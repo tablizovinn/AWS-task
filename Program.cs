@@ -10,6 +10,7 @@ using ConsoleApp3;
 using System.Linq;
 using System.Runtime.InteropServices;
 using static System.Net.Mime.MediaTypeNames;
+using System.Linq.Expressions;
 namespace TextractExample
 {
     class Program
@@ -46,103 +47,88 @@ namespace TextractExample
                 },
                 FeatureTypes = new List<string> { "TABLES", "FORMS" }
             };
-
-            // Call Amazon Textract
-            var response = await textractClient.AnalyzeDocumentAsync(request);
-
-            var Extracted = new List<TextClass>();
-            // Output extracted text
-
-            
-            // Output extracted text
-
-
-          Console.WriteLine("\nExtracted text from PDF | Image:");
-
-            foreach (var item in response.Blocks)
+            try
             {
-                if (item.BlockType == "WORD")
+                // Call Amazon Textract
+                var response = await textractClient.AnalyzeDocumentAsync(request);
+                // List fot the extracted Text
+                var Extracted = new List<TextClass>();
+                
+                Console.WriteLine("\n\nExtracted text from PDF | Image:");
+
+                foreach (var item in response.Blocks)
                 {
-
-                    JsonSerializerSettings settings = new JsonSerializerSettings
+                    if (item.BlockType == "WORD")
                     {
-                        Formatting = Formatting.Indented
-                    };
-                    string json = JsonConvert.SerializeObject(item, settings);
+
+                        JsonSerializerSettings settings = new JsonSerializerSettings
+                        {
+                            Formatting = Formatting.Indented
+                        };
+                        string json = JsonConvert.SerializeObject(item, settings);
 
 
 
-                    TextClass rawText = JsonConvert.DeserializeObject<TextClass>(json);
+                        TextClass rawText = JsonConvert.DeserializeObject<TextClass>(json);
 
-                   Extracted.Add(rawText);            
+                        Extracted.Add(rawText);
+                    }
                 }
-            }
 
-            //Output Text          
-            foreach (var text in Extracted)
-            {
-                JsonSerializerSettings settings = new JsonSerializerSettings
-                {
-                    Formatting = Formatting.Indented
-                };
-                string json = JsonConvert.SerializeObject(text, settings);
-
-                Console.WriteLine(json);
-            }
-     
-
-            
-
-
-
-
-            var dictionary = new Dictionary<string, object>();
-
-            Console.WriteLine("\nExtracted form:");
-            
-            foreach (var item in response.Blocks)
-            {
-
-                if(item.BlockType == "KEY_VALUE_SET")
+                //Output Text          
+                foreach (var text in Extracted)
                 {
                     JsonSerializerSettings settings = new JsonSerializerSettings
                     {
                         Formatting = Formatting.Indented
                     };
-                    string json = JsonConvert.SerializeObject(item, settings);
+                    string json = JsonConvert.SerializeObject(text, settings);
 
                     Console.WriteLine(json);
                 }
 
-            }
-            //
+
+                var extractedTableCells = new List<TableCell>();
 
 
-
-     /*       //Output Text          
-            foreach (var text in Extracted)
-            {
-                JsonSerializerSettings settings = new JsonSerializerSettings
+                Console.WriteLine("\n\nExtracted table from PDF | Image:");
+                foreach (var item in response.Blocks)
                 {
-                    Formatting = Formatting.Indented
-                };
-                string json = JsonConvert.SerializeObject(text, settings);
+                    if (item.BlockType == "CELL")
+                    {
 
-                Console.WriteLine(json);
+                        
+                        TableCell tablecell = await TableCell.ExtractFromBlock(item, response);
+                        
+                        if (!string.IsNullOrEmpty(tablecell.Text))
+                        {
+                            extractedTableCells.Add(tablecell);
+                        }
+                   
+                    }
+                }
+
+                //Output for Table          
+                foreach (var text in extractedTableCells)
+                {
+                    JsonSerializerSettings settings = new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented
+                    };
+                    string json = JsonConvert.SerializeObject(text, settings);
+
+                    Console.WriteLine(json);
+                }
+
+               
+             //Prompting Error Message 
             }
-     */
-            
-
-
-
-
-
-
-
-
-
-
-
+            catch (AmazonTextractException ex)
+            {
+                Console.WriteLine($"ERROR: {ex.Message}");
+                Console.ReadLine();
+            }
+             
             Console.ReadLine();
         }
     }
