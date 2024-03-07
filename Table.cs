@@ -11,17 +11,8 @@ namespace ConsoleApp3
 {
     public class Table
     {
-        // Property to store table data
-        public System.Data.DataTable Tables { get; }
-
-        // Constructor to initialize the table
-        public Table()
-        {
-            Tables = new System.Data.DataTable();
-            Tables.Columns.Add("Text", typeof(string)); // Add a single column for text
-        }
-        
+     public DataTable table = new DataTable();
     }
-    
+
 
 }

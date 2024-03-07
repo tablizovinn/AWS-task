@@ -19,15 +19,15 @@ namespace TextractExample
         static async Task Main(string[] args)
         {
             // Set up your AWS credentials and region
-            var awsCredentials = new Amazon.Runtime.BasicAWSCredentials ("AKIATRMF5LV4HOEP45HR", "PjMUHt2sHUmfqd05v/ezbtbp6bbkwD4wTo0D9yum");
+            var awsCredentials = new Amazon.Runtime.BasicAWSCredentials("AKIAZQ3DQVKMU2PZVM6L", "PD6voS0QPMKrz+9RPHMrKEnjaLRzaU5T0jZiH3Bb");
             var awsRegion = RegionEndpoint.APSoutheast1; // Change to your desired region
 
             // Initialize Textract client
             var textractClient = new AmazonTextractClient(awsCredentials, awsRegion);
 
             // Specify the S3 bucket and object key of the document
-            string s3BucketName = "armansample";
-            string s3ObjectKey = "example1img.jpg";
+            string s3BucketName = "marvinss";
+            string s3ObjectKey = "sampleimg1.jpg";
 
             // Call function to extract text from form and table
             await ExtractTextFromDocument(textractClient, s3BucketName, s3ObjectKey);
@@ -54,75 +54,52 @@ namespace TextractExample
                 // Call Amazon Textract
                 var response = await textractClient.AnalyzeDocumentAsync(request);
 
-               
-                var extracted = new List<TextClass>();
+                Table dataTable = new Table();
 
-                Console.WriteLine("\n\nExtracted text from PDF | Image:");
+                // Extract header
+                var header = response.Blocks
+                    .Where(block => block.BlockType == "TABLE" && block.RowIndex == 0)
+                    .OrderBy(block => block.ColumnIndex)
+                    .SelectMany(block => block.Relationships)
+                    .SelectMany(relationship => relationship.Ids)
+                    .Select(id => response.Blocks.First(block => block.Id == id).Text);
 
-                foreach (var item in response.Blocks)
+                // Add header columns to DataTable
+                foreach (var column in header)
                 {
-                    if (item.BlockType == "WORD")
+                    dataTable.table.Columns.Add(column);
+                }
+
+                // Extract rows
+                var rows = response.Blocks
+                    .Where(block => block.BlockType == "CELL" && block.RowIndex > 0)
+                    .GroupBy(block => block.RowIndex);
+
+                // Add row values to DataTable
+                foreach (var row in rows)
+                {
+                    var dataRow = dataTable.table.NewRow();
+                    foreach (var cell in row.OrderBy(block => block.ColumnIndex))
                     {
-                        JsonSerializerSettings settings = new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented
-                        };
-                        string json = JsonConvert.SerializeObject(item, settings);
+                        var cellText = cell.Relationships
+                            .SelectMany(relationship => relationship.Ids)
+                            .Select(id => response.Blocks.First(block => block.Id == id).Text)
+                            .FirstOrDefault(); // Take the first value if there are multiple
 
-                        TextClass rawText = JsonConvert.DeserializeObject<TextClass>(json);
-
-                        extracted.Add(rawText);
+                        dataRow[cell.ColumnIndex] = cellText;
                     }
-                }
-
-                // Output Text
-                foreach (var text in extracted)
-                {
-                    JsonSerializerSettings settings = new JsonSerializerSettings
-                    {
-                        Formatting = Formatting.Indented
-                    };
-                    string json = JsonConvert.SerializeObject(text, settings);
-
-                    Console.WriteLine(json);
+                    dataTable.table.Rows.Add(dataRow);
                 }
 
 
 
-                var extractedDataTable = new Table();
-                foreach (var item in response.Blocks)
-                {
-                    if (item.BlockType == "CELL")
-                    {
-                        // Extract text from table cell
-                        StringBuilder cellText = new StringBuilder();
-                        foreach (var relationship in item.Relationships)
-                        {
-                            if (relationship.Type == "CHILD")
-                            {
-                                foreach (var childId in relationship.Ids)
-                                {
-                                    var childBlock = response.Blocks.Find(b => b.Id == childId);
-                                    if (childBlock != null && childBlock.BlockType == "WORD")
-                                    {
-                                        cellText.Append(childBlock.Text);
-                                        cellText.Append(" ");
-                                    }
-                                }
-                            }
-                        }
+                var json = JsonConvert.SerializeObject(dataTable, Formatting.Indented);
+                Console.WriteLine(json);
+            
 
-                        // Add the extracted text to the DataTable
-                        extractedDataTable.Tables.Rows.Add(cellText.ToString().Trim());
-                    }
-                }
 
-                Console.WriteLine("\nExtracted table data:");
-                foreach (DataRow row in extractedDataTable.Tables.Rows)
-                {
-                    var json = JsonConvert.SerializeObject(row["TEXT"], Formatting.Indented);
-                    Console.WriteLine(json);
-                }
+
+
 
 
 
@@ -158,7 +135,7 @@ namespace TextractExample
                 form.KeyValueRelationship = GetKeyValueRelationship(keyMap, valueMap, blockMap);
 
                 // Output key-value pairs
-                
+
                 var jsonForm = JsonConvert.SerializeObject(form, Formatting.Indented);
                 Console.WriteLine(jsonForm);
 
@@ -175,8 +152,8 @@ namespace TextractExample
             Console.ReadLine();
         }
 
-       
-       
+
+
 
         public static Dictionary<string, string> GetKeyValueRelationship(List<Block> keyMap, List<Block> valueMap, List<Block> blockMap)
         {
