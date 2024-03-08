@@ -11,6 +11,7 @@ using ConsoleApp3;
 using System.Data;
 using System.Text;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 
 namespace TextractExample
 {
@@ -19,14 +20,14 @@ namespace TextractExample
         static async Task Main(string[] args)
         {
             // Set up your AWS credentials and region
-            var awsCredentials = new Amazon.Runtime.BasicAWSCredentials("AKIAZQ3DQVKMU2PZVM6L", "PD6voS0QPMKrz+9RPHMrKEnjaLRzaU5T0jZiH3Bb");
+            var awsCredentials = new Amazon.Runtime.BasicAWSCredentials("AKIAQ3EGU7XL4GHLJ65Q", "xPdlFyc4kI6to2pMIRZ22UAGpfRNsOmNxcA/hrbr");
             var awsRegion = RegionEndpoint.APSoutheast1; // Change to your desired region
 
             // Initialize Textract client
             var textractClient = new AmazonTextractClient(awsCredentials, awsRegion);
 
             // Specify the S3 bucket and object key of the document
-            string s3BucketName = "marvinss";
+            string s3BucketName = "dadadada";
             string s3ObjectKey = "sampleimg1.jpg";
 
             // Call function to extract text from form and table
@@ -54,21 +55,21 @@ namespace TextractExample
                 // Call Amazon Textract
                 var response = await textractClient.AnalyzeDocumentAsync(request);
 
-                Table dataTable = new Table();
+
+                Table extractedTable = new Table();
 
                 // Extract header
-                var header = response.Blocks
-                    .Where(block => block.BlockType == "TABLE" && block.RowIndex == 0)
-                    .OrderBy(block => block.ColumnIndex)
-                    .SelectMany(block => block.Relationships)
-                    .SelectMany(relationship => relationship.Ids)
-                    .Select(id => response.Blocks.First(block => block.Id == id).Text);
+                    var headerTexts = response.Blocks
+                                    .Where(block => block.BlockType.Value == "CELL" && block.EntityTypes != null && block.EntityTypes.Contains("COLUMN_HEADER"))
+                                    .OrderBy(block => block.ColumnIndex)
+                                    .Select(block => block.Relationships.FirstOrDefault()?.Ids.FirstOrDefault()) 
+                                    .Select(id => response.Blocks.FirstOrDefault(block => block.Relationships.Any(rel => rel.Ids.Contains(id)))?.Text); 
 
-                // Add header columns to DataTable
-                foreach (var column in header)
+                foreach (var column in headerTexts)
                 {
-                    dataTable.table.Columns.Add(column);
+                    extractedTable.table.Columns.Add(column);
                 }
+
 
                 // Extract rows
                 var rows = response.Blocks
@@ -78,7 +79,7 @@ namespace TextractExample
                 // Add row values to DataTable
                 foreach (var row in rows)
                 {
-                    var dataRow = dataTable.table.NewRow();
+                    var dataRow = extractedTable.table.NewRow();
                     foreach (var cell in row.OrderBy(block => block.ColumnIndex))
                     {
                         var cellText = cell.Relationships
@@ -88,14 +89,22 @@ namespace TextractExample
 
                         dataRow[cell.ColumnIndex] = cellText;
                     }
-                    dataTable.table.Rows.Add(dataRow);
+                    extractedTable.table.Rows.Add(dataRow);
                 }
 
 
 
-                var json = JsonConvert.SerializeObject(dataTable, Formatting.Indented);
+                var json = JsonConvert.SerializeObject(extractedTable, Formatting.Indented);
                 Console.WriteLine(json);
-            
+
+
+
+
+
+
+
+
+
 
 
 
