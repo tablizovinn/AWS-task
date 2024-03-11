@@ -20,7 +20,7 @@ namespace TextractExample
         static async Task Main(string[] args)
         {
             // Set up your AWS credentials and region
-            var awsCredentials = new Amazon.Runtime.BasicAWSCredentials("AKIAQ3EGU7XL4GHLJ65Q", "xPdlFyc4kI6to2pMIRZ22UAGpfRNsOmNxcA/hrbr");
+            var awsCredentials = new Amazon.Runtime.BasicAWSCredentials("AKIAQ3EGU7XLRCMRPIV7", "sXOD098hyYQhcbpsqZRfcm/5fWXI8h52z9c8IdSm");
             var awsRegion = RegionEndpoint.APSoutheast1; // Change to your desired region
 
             // Initialize Textract client
@@ -55,25 +55,26 @@ namespace TextractExample
                 // Call Amazon Textract
                 var response = await textractClient.AnalyzeDocumentAsync(request);
 
-
                 Table extractedTable = new Table();
 
-                // Extract header
-                    var headerTexts = response.Blocks
-                                    .Where(block => block.BlockType.Value == "CELL" && block.EntityTypes != null && block.EntityTypes.Contains("COLUMN_HEADER"))
-                                    .OrderBy(block => block.ColumnIndex)
-                                    .Select(block => block.Relationships.FirstOrDefault()?.Ids.FirstOrDefault()) 
-                                    .Select(id => response.Blocks.FirstOrDefault(block => block.Relationships.Any(rel => rel.Ids.Contains(id)))?.Text); 
+
+
+
+                // Extract column header
+                var headerTexts = response.Blocks
+                                .Where(block => block.BlockType.Value == "CELL" && block.EntityTypes != null && block.EntityTypes.Contains("COLUMN_HEADER"))
+                                .OrderBy(block => block.ColumnIndex)
+                                .Select(block => block.Relationships.FirstOrDefault()?.Ids.FirstOrDefault())
+                                .Select(id => response.Blocks.FirstOrDefault(block => block.Relationships.Any(rel => rel.Ids.Contains(id)))?.Text);
 
                 foreach (var column in headerTexts)
                 {
                     extractedTable.table.Columns.Add(column);
                 }
 
-
-                // Extract rows
+                // Extract rows starting from the second row
                 var rows = response.Blocks
-                    .Where(block => block.BlockType == "CELL" && block.RowIndex > 0)
+                    .Where(block => block.BlockType.Value == "CELL" && block.RowIndex > 1) // Adjusted to start from the second row
                     .GroupBy(block => block.RowIndex);
 
                 // Add row values to DataTable
@@ -82,20 +83,37 @@ namespace TextractExample
                     var dataRow = extractedTable.table.NewRow();
                     foreach (var cell in row.OrderBy(block => block.ColumnIndex))
                     {
-                        var cellText = cell.Relationships
-                            .SelectMany(relationship => relationship.Ids)
-                            .Select(id => response.Blocks.First(block => block.Id == id).Text)
-                            .FirstOrDefault(); // Take the first value if there are multiple
+                        // Adjust the column index by subtracting 1 to align with the DataTable column indexing
+                        var columnIndex = cell.ColumnIndex - 1;
 
-                        dataRow[cell.ColumnIndex] = cellText;
+                        var relationshipId = cell.Relationships.FirstOrDefault()?.Ids.FirstOrDefault();
+                        if (relationshipId != null)
+                        {
+                            var correspondingBlock = response.Blocks.FirstOrDefault(b => b.Relationships.Any(r => r.Ids.Contains(relationshipId))
+                                && b.BlockType.Value == "LINE");
+                            if (correspondingBlock != null)
+                            {
+                                // Set the cell value in the DataRow at the adjusted column index
+                                dataRow[columnIndex] = correspondingBlock.Text;
+                            }
+                        }
                     }
                     extractedTable.table.Rows.Add(dataRow);
                 }
 
-
-
                 var json = JsonConvert.SerializeObject(extractedTable, Formatting.Indented);
                 Console.WriteLine(json);
+
+
+
+
+
+
+
+
+
+
+
 
 
 
