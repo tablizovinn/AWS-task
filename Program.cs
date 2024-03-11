@@ -20,7 +20,7 @@ namespace TextractExample
         static async Task Main(string[] args)
         {
             // Set up your AWS credentials and region
-            var awsCredentials = new Amazon.Runtime.BasicAWSCredentials("AKIAQ3EGU7XLRCMRPIV7", "sXOD098hyYQhcbpsqZRfcm/5fWXI8h52z9c8IdSm");
+            var awsCredentials = new Amazon.Runtime.BasicAWSCredentials("", "");
             var awsRegion = RegionEndpoint.APSoutheast1; // Change to your desired region
 
             // Initialize Textract client
@@ -103,32 +103,6 @@ namespace TextractExample
 
                 var json = JsonConvert.SerializeObject(extractedTable, Formatting.Indented);
                 Console.WriteLine(json);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
